@@ -133,7 +133,6 @@
 ; The identifier child of a user_type refines the general @variable capture
 ; (later patterns win over overlapping ranges).
 (user_type (identifier) @type)
-(generic_type) @type
 (tuple_type type: (_) @type)
 (prefix_type type: (_) @type)
 (arrow_type type: (_) @type)
@@ -232,8 +231,6 @@
     "synchronized"
     "type"
     ; effect handlers
-    "perform"
-    "resume"
     "handle"
     "with"
     "throwing"
@@ -419,5 +416,7 @@
 (macro_attr_close) @punctuation.special
 (quote_keyword) @keyword
 (quote_close) @keyword
+(perform_keyword) @keyword
+(resume_keyword) @keyword
 
 

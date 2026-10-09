@@ -152,10 +152,6 @@
         "named": true
       },
       {
-        "type": "generic_type",
-        "named": true
-      },
-      {
         "type": "prefix_type",
         "named": true
       },
@@ -506,6 +502,11 @@
     "fields": {}
   },
   {
+    "type": "boolean_literal",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "call_suffix",
     "named": true,
     "fields": {},
@@ -724,7 +725,7 @@
     },
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
           "type": "tuple_pattern",
@@ -1452,21 +1453,6 @@
       "types": [
         {
           "type": "generic_constraint",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "generic_type",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": false,
-      "types": [
-        {
-          "type": "type_arguments",
           "named": true
         }
       ]
@@ -2592,6 +2578,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "perform_keyword",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -3111,6 +3107,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "resume_keyword",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -4134,10 +4140,6 @@
     "named": false
   },
   {
-    "type": "Array",
-    "named": false
-  },
-  {
     "type": "Bool",
     "named": false
   },
@@ -4163,14 +4165,10 @@
   },
   {
     "type": "Float64",
-    "named": false
+    "named": true
   },
   {
     "type": "Float64",
-    "named": true
-  },
-  {
-    "type": "Int16",
     "named": false
   },
   {
@@ -4178,20 +4176,24 @@
     "named": true
   },
   {
-    "type": "Int32",
-    "named": true
+    "type": "Int16",
+    "named": false
   },
   {
     "type": "Int32",
     "named": false
   },
   {
-    "type": "Int64",
+    "type": "Int32",
     "named": true
   },
   {
     "type": "Int64",
     "named": false
+  },
+  {
+    "type": "Int64",
+    "named": true
   },
   {
     "type": "Int8",
@@ -4218,10 +4220,6 @@
     "named": true
   },
   {
-    "type": "Range",
-    "named": false
-  },
-  {
     "type": "Rune",
     "named": false
   },
@@ -4231,11 +4229,11 @@
   },
   {
     "type": "String",
-    "named": true
+    "named": false
   },
   {
     "type": "String",
-    "named": false
+    "named": true
   },
   {
     "type": "Thistype",
@@ -4318,10 +4316,6 @@
     "named": false
   },
   {
-    "type": "boolean_literal",
-    "named": true
-  },
-  {
     "type": "break",
     "named": false
   },
@@ -4387,6 +4381,10 @@
   },
   {
     "type": "extend",
+    "named": false
+  },
+  {
+    "type": "false",
     "named": false
   },
   {
@@ -4551,8 +4549,8 @@
     "named": false
   },
   {
-    "type": "perform",
-    "named": false
+    "type": "perform_keyword",
+    "named": true
   },
   {
     "type": "private",
@@ -4572,6 +4570,10 @@
   },
   {
     "type": "public",
+    "named": false
+  },
+  {
+    "type": "quote",
     "named": false
   },
   {
@@ -4611,8 +4613,8 @@
     "named": false
   },
   {
-    "type": "resume",
-    "named": false
+    "type": "resume_keyword",
+    "named": true
   },
   {
     "type": "return",
@@ -4680,6 +4682,10 @@
   },
   {
     "type": "throwing",
+    "named": false
+  },
+  {
+    "type": "true",
     "named": false
   },
   {

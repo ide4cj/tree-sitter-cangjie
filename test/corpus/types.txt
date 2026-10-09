@@ -22,7 +22,8 @@ main() {
           (identifier)
           (type_arguments
             (String)
-            (generic_type
+            (user_type
+              (identifier)
               (type_arguments
                 (Int64)))))
         initializer: (postfix_expression
@@ -68,7 +69,7 @@ main() {
     let fixed: VArray<Int64, $3> = VArray<Int64, $3>(1, 2, 3)
     let flag: Bool = true
     let ch: Rune = r'a'
-    let none: Nothing = throw Nothing()
+    let none: Nothing = throw Exception()
 }
 
 ---
@@ -273,7 +274,8 @@ main() {
       (variable_declaration
         name: (variable_name
           (var_binding_pattern))
-        type: (generic_type
+        type: (user_type
+          (identifier)
           (type_arguments
             (prefix_type
               type: (Int64))))
@@ -337,7 +339,8 @@ main() {
               (identifier)
               (type_arguments
                 (Int64)
-                (generic_type
+                (user_type
+                  (identifier)
                   (type_arguments
                     (user_type
                       (identifier)

@@ -46,7 +46,7 @@
 ; ===== Names =====
 
 ; NOTE: no global (identifier) capture. The grammar wraps type references in
-; user_type/_name with identifier children, and a child capture always paints
+; type_name/_name with identifier children, and a child capture always paints
 ; over the parent's @type in nvim regardless of pattern order — a global
 ; @variable would decolor `Foo<Bar>`/`HashMap<T, U>`. Contextual keywords used
 ; as identifiers (open/main/handle) therefore render uncolored, like any
@@ -129,10 +129,10 @@
 ; All user-written type references: parameters, return types, variable
 ; annotations, super/extend lists, casts, generic arguments. Fielded
 ; captures avoid painting structural delimiters as type.
-(user_type) @type
-; The identifier child of a user_type refines the general @variable capture
+(type_name) @type
+; The identifier child of a type_name refines the general @variable capture
 ; (later patterns win over overlapping ranges).
-(user_type (identifier) @type)
+(type_name (identifier) @type)
 (tuple_type type: (_) @type)
 (prefix_type type: (_) @type)
 (arrow_type type: (_) @type)
@@ -239,7 +239,9 @@
 ] @keyword
 
 ; Hard-keyword primitive types (reserved words in Cangjie).
-; NOTE: String is NOT here — it is an ordinary (soft) type name.
+; NOTE: soft builtin type names (String, VArray, ...) are ordinary
+; identifiers, so they are not listed here — they fall through to the
+; generic `(type_name (identifier) @type)` rules below.
 [
     (Int8)
     (Int16)
@@ -260,9 +262,6 @@
     (Nothing)
     (Thistype)
 ] @type.builtin
-
-; Soft builtin type: ordinary identifier-like name
-(String) @type
 
 ; ===== Operators & punctuation =====
 
@@ -350,22 +349,9 @@
                 (identifier) @function)))
     [(call_suffix) (lambda_expression)])
 
-; Numeric casts look like bare calls: Int64(x), Float64(y), Rune(n).
-; Placed after the callee rules above so it wins by order, not priority.
-((
-    (postfix_expression
-        (postfix_expression
-            (identifier) @type.builtin)
-        (call_suffix)))
- (#any-of? @type.builtin
-    "Int8" "Int16" "Int32" "Int64" "IntNative"
-    "UInt8" "UInt16" "UInt32" "UInt64" "UIntNative"
-    "Float16" "Float32" "Float64"
-    "Rune"))
-
 ; VArray<T, $N> — matched by name; after the callee refinements so the
 ; construction call VArray<Int64, $N>() still colors as the builtin type.
-(user_type (identifier) @type.builtin (#eq? @type.builtin "VArray"))
+(type_name (identifier) @type.builtin (#eq? @type.builtin "VArray"))
 
 ; ===== Macro quote(...) DSL =====
 ; Refinements over the operator list above: delimiters inside quote(...) are

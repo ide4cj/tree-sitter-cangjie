@@ -117,6 +117,34 @@ static void skip_ws(TSLexer *lexer) {
         skip(lexer);
 }
 
+// Comments inside quote and macro bodies are raw content, not tokens: an
+// apostrophe, quote or delimiter in one ("they're", "(unclosed", "]") must
+// not open a string or shift the delimiter stack. Line comments run to EOL
+// (the newline is left for the caller's own handling), block comments to
+// '*/'. The leading '/' is consumed either way, so a lone '/' is ordinary
+// content — callers must not consume it again.
+static void skip_comment_content(TSLexer *lexer) {
+    advance(lexer);
+    if (lexer->lookahead == '/') {
+        while (lexer->lookahead != 0 && lexer->lookahead != '\n' && lexer->lookahead != '\r') {
+            advance(lexer);
+        }
+    } else if (lexer->lookahead == '*') {
+        advance(lexer);
+        while (lexer->lookahead != 0) {
+            if (lexer->lookahead == '*') {
+                advance(lexer);
+                if (lexer->lookahead == '/') {
+                    advance(lexer);
+                    return;
+                }
+                continue;
+            }
+            advance(lexer);
+        }
+    }
+}
+
 // Pop the top frame and emit its close token.
 static bool emit_close(TSLexer *lexer, Scanner *s, uint8_t sym) {
     pop(s);
@@ -616,6 +644,13 @@ static bool scan_quote_content(TSLexer *lexer) {
     lexer->result_symbol = QUOTE_CONTENT;
     while (lexer->lookahead != 0) {
         char c = (char)lexer->lookahead;
+        if (c == '/') {
+            // Comment inside a quote body: raw content to EOL / '*/', so the
+            // apostrophes, quotes and parens in it stay content.
+            any = true;
+            skip_comment_content(lexer);
+            continue;
+        }
         if (c == '\n' || c == '\r') {
             // Every newline inside a quote body is its own token; whether it is
             // a visible separator quoteToken or ignored trivia is decided by the
@@ -764,6 +799,14 @@ static bool scan_macro_body_content(TSLexer *lexer, Scanner *s) {
             }
             advance(lexer);
             any = true;
+            continue;
+        }
+        if (c == '/') {
+            // Comment inside a macro body: raw content to EOL / '*/', so an
+            // apostrophe or a delimiter in it cannot start a string token or
+            // unbalance the group stack.
+            any = true;
+            skip_comment_content(lexer);
             continue;
         }
         if (c == '#' || c == '"' || c == '\'' || c == '\\') {

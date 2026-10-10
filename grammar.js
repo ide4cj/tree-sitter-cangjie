@@ -165,6 +165,32 @@ const SOFT_MODIFIER_WORDS = [
 ];
 const MODIFIER_TOKENS = SOFT_MODIFIER_WORDS.map((w) => TOKENS[w.toUpperCase()]);
 
+// The hard-keyword primitive types, one list for three users: the type
+// world (`_type`), extend targets (`extend_type`) and expression position
+// (`_hard_keyword_types`).
+const PRIMITIVE_TYPES = [
+  ['INT8', 'Int8'],
+  ['INT16', 'Int16'],
+  ['INT32', 'Int32'],
+  ['INT64', 'Int64'],
+  ['INTNATIVE', 'IntNative'],
+  ['UINT8', 'UInt8'],
+  ['UINT16', 'UInt16'],
+  ['UINT32', 'UInt32'],
+  ['UINT64', 'UInt64'],
+  ['UINTNATIVE', 'UIntNative'],
+  ['FLOAT16', 'Float16'],
+  ['FLOAT32', 'Float32'],
+  ['FLOAT64', 'Float64'],
+  ['RUNE', 'Rune'],
+  ['BOOL', 'Bool'],
+  ['UNIT', 'Unit'],
+  ['NOTHING', 'Nothing'],
+];
+
+const primitiveTokens = () => PRIMITIVE_TYPES.map(([token]) => TOKENS[token]);
+const primitiveTypeNodes = ($) => PRIMITIVE_TYPES.map(([token, node]) => alias(TOKENS[token], $[node]));
+
 // cjc 1.3.0 ground truth: primitives are reserved in EVERY identifier
 // position (bindings, params, members, type names); quote/true/false/This
 // likewise; the try-DSL words and modifiers are contextual everywhere.
@@ -500,10 +526,17 @@ const M = {
       seq(choice($.identifier, alias(TOKENS.THISTYPE, $.Thistype)), token('<:'), sep1($._type, '&')),
 
     // ===== members & functions =====
-    function_definition: ($) =>
+    function_definition: ($) => seq(optional($.modifiers), $._function_tail),
+    // Block-scope functions carry no modifiers (cjc: "unexpected modifier
+    // 'private' on function declaration in main function body"). Keeping them
+    // out of the local rule also removes the modifier tokens from
+    // statement-start states, so soft words like `open` lex as identifiers
+    // in call position (`unsafe { open(p, oflag) }`) — see the invariant note
+    // on `_expression_or_declarations` before adding anything here.
+    _local_function_definition: ($) => $._function_tail,
+    _function_tail: ($) =>
       prec.right(
         seq(
-          optional($.modifiers),
           TOKENS.FUNC,
           field('name', alias(reserved('id', $.identifier), $.func_name)),
           optional($.type_parameters),
@@ -601,7 +634,14 @@ const M = {
         $.primary_init_param_list,
         '{',
         optional(
-          repeat(seq(choice($._expression, $.variable_declaration, $.function_definition), optional(terminator($)))),
+          // A primary constructor body is a function body, so locals only:
+          // cjc rejects modifiers on declarations inside it, same as any block.
+          repeat(
+            seq(
+              choice($._expression, $.variable_declaration, alias($._local_function_definition, $.function_definition)),
+              optional(terminator($)),
+            ),
+          ),
         ),
         '}',
       ),
@@ -630,31 +670,24 @@ const M = {
     extend_type: ($) =>
       choice(
         seq(optional($.type_parameters), $._name, optional($.type_arguments)),
-        TOKENS.INT8,
-        TOKENS.INT16,
-        TOKENS.INT32,
-        TOKENS.INT64,
-        TOKENS.INTNATIVE,
-        TOKENS.UINT8,
-        TOKENS.UINT16,
-        TOKENS.UINT32,
-        TOKENS.UINT64,
-        TOKENS.UINTNATIVE,
-        TOKENS.FLOAT16,
-        TOKENS.FLOAT32,
-        TOKENS.FLOAT64,
-        TOKENS.RUNE,
-        TOKENS.BOOL,
-        TOKENS.NOTHING,
-        TOKENS.UNIT,
-        token('String'),
+        ...primitiveTokens(),
       ),
 
     block: ($) => seq('{', optional($._expression_or_declarations), '}'),
+    // INVARIANT: nothing reachable here may start with a modifier token.
+    // Statement-start states are the ONLY place the soft modifier words
+    // (`open`, `public`, `private`, `override`, ...) must fall back to plain
+    // identifiers — `unsafe { open(p, oflag) }` depends on it. Adding a
+    // modifier-prefixed declaration here (or reusing `$.modifiers` in a
+    // statement position) silently re-breaks those identifiers.
     _expression_or_declarations: ($) =>
       repeat1(
         seq(
-          choice(alias($._local_variable_declaration, $.variable_declaration), $.function_definition, $._expression),
+          choice(
+            alias($._local_variable_declaration, $.variable_declaration),
+            alias($._local_function_definition, $.function_definition),
+            $._expression,
+          ),
           repeat(terminator($)),
         ),
       ),
@@ -743,6 +776,7 @@ const M = {
         $._literal,
         $.array_literal,
         alias(reserved('id', $.identifier), $.identifier),
+        $.type_conv_expr,
         $.parenthesized_expression,
         $.tuple_expression,
         $.range_expression,
@@ -943,6 +977,22 @@ const M = {
 
     synchronized_expression: ($) => seq(TOKENS.SYNCHRONIZED, '(', $._expression, ')', $.block),
     spawn_expression: ($) => seq(TOKENS.SPAWN, optional(seq('(', $._expression, ')')), $.lambda_expression),
+
+    // The hard-keyword primitives in expression position. They can never be
+    // callees (they are reserved words), so `T(...)` is a conversion and
+    // `T.m` / `T::m` / `T<Ts>(...)` member chains — see type_conv_expr and the
+    // type-name base in postfix_expression. Soft builtin type names (`String`,
+    // `VArray`, ...) are deliberately NOT here: they are ordinary identifiers,
+    // so `String(x)` is an ordinary call on a name, exactly as in cjc.
+    _hard_keyword_types: ($) => choice(...primitiveTypeNodes($)),
+
+    // A type conversion is exactly `T ( expression )` — one operand, no
+    // argument list, no trailing lambda. Deliberately spelled out instead of
+    // reusing `call_suffix`: a conversion is not a call, and keeping '(' out
+    // of `_member_suffix` below means the two productions never overlap, so
+    // the parser has nothing to disambiguate (no precedence games).
+    type_conv_expr: ($) => seq(field('type', $._hard_keyword_types), '(', field('argument', $._expression), ')'),
+
     perform_expression: ($) =>
       seq(alias($._perform_dsl, $.perform_keyword), field('argument', $._expression)),
 
@@ -1069,30 +1119,13 @@ const M = {
         $.arrow_type,
         $.tuple_type,
         $.prefix_type,
-        alias(TOKENS.INT8, $.Int8),
-        alias(TOKENS.INT16, $.Int16),
-        alias(TOKENS.INT32, $.Int32),
-        alias(TOKENS.INT64, $.Int64),
-        alias(TOKENS.INTNATIVE, $.IntNative),
-        alias(TOKENS.UINT8, $.UInt8),
-        alias(TOKENS.UINT16, $.UInt16),
-        alias(TOKENS.UINT32, $.UInt32),
-        alias(TOKENS.UINT64, $.UInt64),
-        alias(TOKENS.UINTNATIVE, $.UIntNative),
-        alias(TOKENS.FLOAT16, $.Float16),
-        alias(TOKENS.FLOAT32, $.Float32),
-        alias(TOKENS.FLOAT64, $.Float64),
-        alias(token('String'), $.String),
-        alias(TOKENS.RUNE, $.Rune),
-        alias(TOKENS.BOOL, $.Bool),
-        alias(TOKENS.NOTHING, $.Nothing),
-        alias(TOKENS.UNIT, $.Unit),
+        ...primitiveTypeNodes($),
         alias(TOKENS.THISTYPE, $.Thistype),
-        $.user_type,
+        $.type_name,
         $.const_generic,
       ),
 
-    user_type: ($) => prec.right(seq($._name, optional($.type_arguments))),
+    type_name: ($) => prec.right(seq($._name, optional($.type_arguments))),
 
     arrow_type: ($) => seq('(', optional($._named_or_type_list), ')', token('->'), field('type', $._type)),
 
@@ -1135,9 +1168,26 @@ const M = {
     quest_access: ($) => seq('?', choice($.field_access, $.index_access, $.call_suffix, $.lambda_expression)),
     inc_or_dec: (_) => token(choice('++', '--')),
 
+    // Member-ish suffixes: what a chain base can be followed by. '(' is
+    // absent on purpose — `T(args)` is a type_conv_expr, not a call on T,
+    // so the type-name base and the conversion never compete.
+    _member_suffix: ($) =>
+      choice(
+        prec(PREC.MEMBER, $.field_access),
+        prec(PREC.MEMBER, $.scope_resolution),
+        alias($._generic_arguments, $.type_arguments),
+      ),
+
     postfix_expression: ($) =>
       choice(
         $._primary_expression,
+        // A primitive type name is an expression only as the base of a
+        // member chain — `Int64.MAX_VALUE`, `Bool.parse(x)`, `Int64<...>(...)`.
+        // It is not a value on its own, so bare `Int64` is not an expression.
+        prec.right(
+          PREC.MEMBER,
+          seq(field('base', $._hard_keyword_types), field('suffix', $._member_suffix)),
+        ),
         prec.right(
           PREC.MEMBER,
           seq(

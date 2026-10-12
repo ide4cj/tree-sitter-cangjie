@@ -1,7 +1,7 @@
 import std.math.*
 //^ @keyword
 //     ^ @module
-//              ^ @operator
+//              ^ @punctuation.delimiter
 import std.io as Io
 //     ^ @module
 //               ^ @module
@@ -15,14 +15,14 @@ class Shape<T> <: Pane {
 
     let area: Float64 = 1.5
 //  ^ @keyword
-//      ^ @variable
+//      ^ @property
 //            ^ @type.builtin
 //                    ^ @operator
 //                      ^ @number
 
     func scale<F, R>(k: F, v: Int64): Unit where F <: Number {
 //  ^ @keyword
-//       ^ @function
+//       ^ @function.method
 //             ^ @type
 //                ^ @type
 //                   ^ @parameter
@@ -60,7 +60,7 @@ enum Color { Red | Green }
 //^ @keyword
 //   ^ @type
 //           ^ @constant
-//               ^ @operator
+//               ^ @punctuation.delimiter
 //                 ^ @constant
 
 main() {
@@ -68,7 +68,7 @@ main() {
     let f = obj.field()
 //  ^ @keyword
 //      ^ @variable
-//              ^ @function
+//              ^ @function.method
 }
 
 macro mk(x: Expr) { @body(1) }

@@ -30,12 +30,30 @@
 (escape_sequence) @string.escape
 
 (var_binding_pattern) @variable
+; A member variable: let/var/const declared directly in a type body is a
+; field (cjls's `property`), not a variable. A foreign { } block declares
+; globals, so only the type definitions' bodies count.
+(class_definition body: (declaration_body [
+    (variable_declaration name: (variable_name (var_binding_pattern) @property))
+    (decorated_declaration (variable_declaration name: (variable_name (var_binding_pattern) @property)))]))
+(struct_definition body: (declaration_body [
+    (variable_declaration name: (variable_name (var_binding_pattern) @property))
+    (decorated_declaration (variable_declaration name: (variable_name (var_binding_pattern) @property)))]))
+(interface_definition body: (declaration_body [
+    (variable_declaration name: (variable_name (var_binding_pattern) @property))
+    (decorated_declaration (variable_declaration name: (variable_name (var_binding_pattern) @property)))]))
+(extend_definition body: (declaration_body [
+    (variable_declaration name: (variable_name (var_binding_pattern) @property))
+    (decorated_declaration (variable_declaration name: (variable_name (var_binding_pattern) @property)))]))
+(enum_body [
+    (variable_declaration name: (variable_name (var_binding_pattern) @property))
+    (decorated_declaration (variable_declaration name: (variable_name (var_binding_pattern) @property)))])
 (this_super_expression) @variable.builtin
 
 (modifiers) @keyword
 
 ; General member reads/writes: obj.field, this.area. Placed BEFORE the call
-; refinements so callee positions win @function by "last capture wins".
+; refinements so callee positions win @function.method by "last capture wins".
 (field_access (identifier) @property)
 
 [
@@ -55,7 +73,9 @@
 ; Parameter names (identifier nodes in parameter positions).
 (parameter para_name: (identifier) @parameter)
 (named_parameter para_name: (identifier) @parameter)
-(unnamed_member_param para_name: (identifier) @parameter)
+; A primary constructor's let/var parameter declares a field: @property.
+(unnamed_member_param para_name: (identifier) @property)
+(named_member_param (named_parameter para_name: (identifier) @property))
 (lambda_parameter (var_binding_pattern) @parameter)
 (property_definition setter: (identifier) @parameter)
 (macro_parameter name: (identifier) @parameter)
@@ -80,50 +100,67 @@
             suffix: (type_arguments))
     suffix: (call_suffix))
 
-;   member:    a.b(x)  /  a.b<T>(x)  /  a.b<T>
+;   member:    a.b(x)  /  a.b { }  /  a.b<T>(x)  /  a.b<T>   — a method (cjls's `method`)
 (postfix_expression
     base: (postfix_expression
-            suffix: (field_access (identifier) @function))
-    suffix: (call_suffix))
+            suffix: (field_access (identifier) @function.method))
+    suffix: [(call_suffix) (lambda_expression)])
 
 (postfix_expression
     base: (postfix_expression
-            suffix: (field_access (identifier) @function))
+            suffix: (field_access (identifier) @function.method))
     suffix: (type_arguments))
 
 (postfix_expression
     base: (postfix_expression
             base: (postfix_expression
-                    suffix: (field_access (identifier) @function))
+                    suffix: (field_access (identifier) @function.method))
             suffix: (type_arguments))
     suffix: (call_suffix))
 
-;   scoped:    Foo::create(x)  /  Foo::create<T>(x)
+;   scoped:    Foo::create(x)  /  Foo::create { }  /  Foo::create<T>(x)   — a method too
 (postfix_expression
     base: (postfix_expression
-            suffix: (scope_resolution (identifier) @function))
-    suffix: (call_suffix))
+            suffix: (scope_resolution (identifier) @function.method))
+    suffix: [(call_suffix) (lambda_expression)])
 
 (postfix_expression
     base: (postfix_expression
-            suffix: (scope_resolution (identifier) @function))
+            suffix: (scope_resolution (identifier) @function.method))
     suffix: (type_arguments))
 
 (class_name) @type
-; The primary_init's name is a class_name node — color it like the calls
-; (let x = C(...)), not like the type position.
-(primary_init (class_name) @function)
+; The primary_init's name is a class_name node: it names a constructor, a
+; member function like init, so a method rather than the type position.
+(primary_init (class_name) @function.method)
 (struct_name) @type
 (interface_name) @type
 (enum_name) @type
 (type_alias_name) @type
 (func_name) @function
+; A func declared in a type body is a method. A foreign { } block declares
+; globals, so only the type definitions' bodies count.
+(class_definition body: (declaration_body [
+    (function_definition name: (func_name) @function.method)
+    (decorated_declaration (function_definition name: (func_name) @function.method))]))
+(struct_definition body: (declaration_body [
+    (function_definition name: (func_name) @function.method)
+    (decorated_declaration (function_definition name: (func_name) @function.method))]))
+(interface_definition body: (declaration_body [
+    (function_definition name: (func_name) @function.method)
+    (decorated_declaration (function_definition name: (func_name) @function.method))]))
+(extend_definition body: (declaration_body [
+    (function_definition name: (func_name) @function.method)
+    (decorated_declaration (function_definition name: (func_name) @function.method))]))
+(enum_body [
+    (function_definition name: (func_name) @function.method)
+    (decorated_declaration (function_definition name: (func_name) @function.method))])
 (macro_name) @function.macro
 (property_name) @property
 
 ; ===== Types =====
 
-; Capture only the type child so delimiters (: ? -> parens) keep operator color.
+; Capture only the type child so delimiters (: ? -> parens) keep their own color.
 (return_type type: (_) @type)
 
 ; All user-written type references: parameters, return types, variable
@@ -268,16 +305,28 @@
 (String) @type
 
 ; ===== Operators & punctuation =====
+; Punctuation is not an operator: the classes follow cjls's semantic tokens
+; (and the VS Code grammar), so an editor shows the same token type whichever
+; of them colors it.
 
 [
-    "."
-    ","
     "("
     ")"
     "["
     "]"
     "{"
     "}"
+] @punctuation.bracket
+
+[
+    "."
+    ","
+    ":"
+    ";"
+    "::"
+] @punctuation.delimiter
+
+[
     "**"
     "*"
     "%"
@@ -292,8 +341,6 @@
     "^"
     "<<"
     ">>"
-    ":"
-    ";"
     "="
     "+="
     "-="
@@ -324,7 +371,6 @@
     "|>"
     "~>"
     "~"
-    "::"
     "&&="
     "||="
 ] @operator
@@ -332,25 +378,29 @@
 ; ++/-- are a single named token (not anonymous "+"-style literals)
 (inc_or_dec) @operator
 
-; The unit () must be captured AFTER the operator list: its '(' ')' children
-; capture @operator on the same range, and the last capture wins.
+; Tokens of the operator list that are punctuation where they stand: the
+; angle brackets of type arguments and parameters, the '|' between enum
+; constructors, the '*' of `import a.*`. After the list: the last capture wins.
+(type_arguments ["<" ">"] @punctuation.bracket)
+(type_parameters ["<" ">"] @punctuation.bracket)
+(enum_body "|" @punctuation.delimiter)
+(package_full "*" @punctuation.delimiter)
+
+; The unit () is a constant, not two brackets. Its '(' ')' children are
+; captured @punctuation.bracket by the list above, and a child's capture
+; paints over its parent's, so the children are recaptured here, after it.
 (unit_literal) @constant.builtin
+(unit_literal ["(" ")"] @constant.builtin)
 
 ; ===== Call-shape refinements (must follow broad captures above) =====
 
-; Callee names in calls: foo(...) and obj.method(...)
-; Also covers trailing-lambda calls: list.map { x => x }
+; Callee names in calls: foo(...), and trailing-lambda calls: run { x => x }.
 ; The recursive postfix rule wraps each base in its own node, hence the
-; nesting depth: callee of a call sits two levels down (three for methods).
+; nesting depth: the callee of a call sits two levels down. Member and scoped
+; callees (obj.method(...), obj.method { }) are the fielded rules above.
 (postfix_expression
     (postfix_expression
         (identifier) @function)
-    [(call_suffix) (lambda_expression)])
-(postfix_expression
-    (postfix_expression
-        (postfix_expression
-            (field_access
-                (identifier) @function)))
     [(call_suffix) (lambda_expression)])
 
 ; Numeric casts look like bare calls: Int64(x), Float64(y), Rune(n).
@@ -371,7 +421,7 @@
 (user_type (identifier) @type.builtin (#eq? @type.builtin "VArray"))
 
 ; ===== Macro quote(...) DSL =====
-; Refinements over the operator list above: delimiters inside quote(...) are
+; Refinements over the punctuation and operator lists above: delimiters inside quote(...) are
 ; verbatim template text, not code punctuation.
 
 (quote_raw_token) @markup.raw

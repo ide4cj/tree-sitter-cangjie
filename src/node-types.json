@@ -794,10 +794,6 @@
           "named": true
         },
         {
-          "type": "static_init",
-          "named": true
-        },
-        {
           "type": "variable_declaration",
           "named": true
         }
@@ -858,10 +854,6 @@
         },
         {
           "type": "property_definition",
-          "named": true
-        },
-        {
-          "type": "static_init",
           "named": true
         },
         {
@@ -987,10 +979,6 @@
         },
         {
           "type": "property_definition",
-          "named": true
-        },
-        {
-          "type": "static_init",
           "named": true
         },
         {
@@ -1183,18 +1171,10 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": false,
+      "required": true,
       "types": [
         {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "scoped_identifier",
-          "named": true
-        },
-        {
-          "type": "type_arguments",
+          "type": "_type",
           "named": true
         },
         {
@@ -2128,6 +2108,10 @@
           "named": true
         },
         {
+          "type": "modifiers",
+          "named": true
+        },
+        {
           "type": "parameter_list",
           "named": true
         },
@@ -2414,6 +2398,10 @@
             "named": true
           },
           {
+            "type": "package_identifier",
+            "named": true
+          },
+          {
             "type": "scoped_identifier",
             "named": true
           }
@@ -2488,6 +2476,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
         {
           "type": "macro_call",
           "named": true
@@ -3241,6 +3233,10 @@
             "named": true
           },
           {
+            "type": "package_identifier",
+            "named": true
+          },
+          {
             "type": "scoped_identifier",
             "named": true
           }
@@ -3349,22 +3345,6 @@
           "named": true
         }
       ]
-    }
-  },
-  {
-    "type": "static_init",
-    "named": true,
-    "fields": {
-      "body": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "block",
-            "named": true
-          }
-        ]
-      }
     }
   },
   {
@@ -3487,6 +3467,10 @@
         "types": [
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "package_identifier",
             "named": true
           },
           {
@@ -3955,7 +3939,7 @@
       },
       "parameter_name": {
         "multiple": false,
-        "required": true,
+        "required": false,
         "types": [
           {
             "type": "_",
@@ -3982,6 +3966,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
         {
           "type": "macro_call",
           "named": true
@@ -4302,28 +4290,12 @@
     "named": true
   },
   {
-    "type": "Bool",
-    "named": false
-  },
-  {
-    "type": "Float16",
-    "named": false
-  },
-  {
     "type": "Float16",
     "named": true
   },
   {
     "type": "Float32",
-    "named": false
-  },
-  {
-    "type": "Float32",
     "named": true
-  },
-  {
-    "type": "Float64",
-    "named": false
   },
   {
     "type": "Float64",
@@ -4334,44 +4306,20 @@
     "named": true
   },
   {
-    "type": "Int16",
-    "named": false
-  },
-  {
     "type": "Int32",
     "named": true
-  },
-  {
-    "type": "Int32",
-    "named": false
   },
   {
     "type": "Int64",
     "named": true
   },
   {
-    "type": "Int64",
-    "named": false
-  },
-  {
     "type": "Int8",
     "named": true
   },
   {
-    "type": "Int8",
-    "named": false
-  },
-  {
-    "type": "IntNative",
-    "named": false
-  },
-  {
     "type": "IntNative",
     "named": true
-  },
-  {
-    "type": "Nothing",
-    "named": false
   },
   {
     "type": "Nothing",
@@ -4380,10 +4328,6 @@
   {
     "type": "Rune",
     "named": true
-  },
-  {
-    "type": "Rune",
-    "named": false
   },
   {
     "type": "Thistype",
@@ -4394,48 +4338,24 @@
     "named": true
   },
   {
-    "type": "UInt16",
-    "named": false
-  },
-  {
     "type": "UInt32",
     "named": true
-  },
-  {
-    "type": "UInt32",
-    "named": false
   },
   {
     "type": "UInt64",
     "named": true
   },
   {
-    "type": "UInt64",
-    "named": false
-  },
-  {
     "type": "UInt8",
     "named": true
-  },
-  {
-    "type": "UInt8",
-    "named": false
   },
   {
     "type": "UIntNative",
     "named": true
   },
   {
-    "type": "UIntNative",
-    "named": false
-  },
-  {
     "type": "Unit",
     "named": true
-  },
-  {
-    "type": "Unit",
-    "named": false
   },
   {
     "type": "[",
@@ -4697,6 +4617,10 @@
   {
     "type": "package",
     "named": false
+  },
+  {
+    "type": "package_identifier",
+    "named": true
   },
   {
     "type": "perform_keyword",

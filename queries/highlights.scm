@@ -508,9 +508,15 @@
     "$" @variable.builtin .
     (identifier) @variable.builtin)
 
-; ===== Macro call arguments: raw token streams per spec =====
+; ===== Macro call arguments: ad-hoc expression lists =====
+; Bodies parse as expressions, so identifiers, numbers, strings and operators
+; color via the regular captures above. The named-argument label is a direct
+; identifier child (argument expressions nest under postfix_expression), and
+; colors like a parameter — the same treatment as call labels.
 
-(macro_raw_token) @markup.raw
+(call_suffix (identifier) @variable.parameter)
+(macro_attribute_body (identifier) @variable.parameter)
+(macro_call_body (identifier) @variable.parameter)
 
 ; ===== String interpolation =====
 

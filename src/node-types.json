@@ -1580,7 +1580,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "_expression",
@@ -1825,13 +1825,28 @@
   {
     "type": "macro_attribute_body",
     "named": true,
-    "fields": {},
+    "fields": {
+      "value": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "_expression",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": true,
       "required": true,
       "types": [
         {
-          "type": "escape_sequence",
+          "type": "_expression",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         },
         {
@@ -1840,18 +1855,6 @@
         },
         {
           "type": "macro_attr_open",
-          "named": true
-        },
-        {
-          "type": "macro_raw_token",
-          "named": true
-        },
-        {
-          "type": "rune_literal",
-          "named": true
-        },
-        {
-          "type": "string_literal",
           "named": true
         }
       ]
@@ -1883,13 +1886,28 @@
   {
     "type": "macro_call_body",
     "named": true,
-    "fields": {},
+    "fields": {
+      "value": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": "_expression",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": true,
       "required": true,
       "types": [
         {
-          "type": "escape_sequence",
+          "type": "_expression",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         },
         {
@@ -1898,18 +1916,6 @@
         },
         {
           "type": "macro_input_open",
-          "named": true
-        },
-        {
-          "type": "macro_raw_token",
-          "named": true
-        },
-        {
-          "type": "rune_literal",
-          "named": true
-        },
-        {
-          "type": "string_literal",
           "named": true
         }
       ]
@@ -2476,10 +2482,6 @@
       "multiple": true,
       "required": false,
       "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
         {
           "type": "macro_call",
           "named": true
@@ -3939,7 +3941,7 @@
       },
       "parameter_name": {
         "multiple": false,
-        "required": false,
+        "required": true,
         "types": [
           {
             "type": "_",
@@ -3966,10 +3968,6 @@
       "multiple": true,
       "required": false,
       "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
         {
           "type": "macro_call",
           "named": true
@@ -4580,10 +4578,6 @@
   },
   {
     "type": "macro_input_open",
-    "named": true
-  },
-  {
-    "type": "macro_raw_token",
     "named": true
   },
   {

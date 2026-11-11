@@ -10886,8 +10886,25 @@
       "type": "PREC",
       "value": 1,
       "content": {
-        "type": "SYMBOL",
-        "name": "_macro_head"
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "_macro_head"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "macro_call_body"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
       }
     },
     "macro_attribute_body": {
@@ -11204,6 +11221,9 @@
     ],
     [
       "_macro_head"
+    ],
+    [
+      "macro_call"
     ]
   ],
   "precedences": [],

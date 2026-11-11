@@ -45,11 +45,10 @@ enum TokenType {
 #define CTX_QUOTE_PAREN 7
 #define CTX_QUOTE_INTERP 8
 
-#define STACK_MAX 32
+#define STACK_MAX 64
 
 // Per-kind profile: the stack machine's transition table. Capability flags are
-// context facts, NOT derivable from valid_symbols (quote bodies lex raw-string
-// syntax as verbatim content).
+// context facts, NOT derivable from valid_symbols.
 typedef struct {
     bool expr_mode;      // expression position
     uint8_t close_token; // 0 = no constant closer
@@ -105,9 +104,8 @@ static void skip_ws(TSLexer *lexer) {
         skip(lexer);
 }
 
-// Comment content inside quote/macro bodies is raw: delimiters in it must not
-// open strings or shift the delimiter stack. EOL (newline left for the caller)
-// or '*/' ends it; the leading '/' is consumed.
+// Comment content inside quote bodies is raw: delimiters must not open strings or shift the
+// stack; EOL or '*/' ends it (the leading '/' is consumed).
 static void skip_comment_content(TSLexer *lexer) {
     advance(lexer);
     if (lexer->lookahead == '/') {
@@ -138,8 +136,7 @@ static bool emit_close(TSLexer *lexer, Scanner *s, uint8_t sym) {
     return true;
 }
 
-// String opens, valid_symbols-gated. allow_raw is a context capability, not
-// derivable from valid_symbols: quote bodies pass false (raw syntax = content).
+// String opens, valid_symbols-gated; allow_raw = context capability (quote bodies pass false).
 static bool scan_string_opens(TSLexer *lexer, Scanner *s, const bool *valid_symbols, bool allow_raw) {
     if (allow_raw && valid_symbols[RAW_STRING_START] && lexer->lookahead == '#') {
         return scan_raw_open(lexer, s);
@@ -155,17 +152,19 @@ void *tree_sitter_cangjie_external_scanner_create() { return calloc(1, sizeof(Sc
 
 void tree_sitter_cangjie_external_scanner_destroy(void *payload) { free(payload); }
 
+// Serialize layout: parallel arrays at offsets 1 / 1+N / 1+2N (the old interleaving collided
+// with the kinds zone past 16 frames).
 unsigned tree_sitter_cangjie_external_scanner_serialize(void *payload, char *buffer) {
     Scanner *s = (Scanner *)payload;
     if (s->top > STACK_MAX)
         s->top = STACK_MAX;
     buffer[0] = (char)s->top;
     for (uint8_t i = 0; i < s->top; i++) {
-        buffer[1 + i * 2] = (char)s->kinds[i];
-        buffer[2 + i * 2] = s->params[i];
-        buffer[33 + i] = s->params2[i];
+        buffer[1 + i] = (char)s->kinds[i];
+        buffer[1 + STACK_MAX + i] = s->params[i];
+        buffer[1 + 2 * STACK_MAX + i] = s->params2[i];
     }
-    return 65;
+    return 1 + 3 * STACK_MAX;
 }
 
 void tree_sitter_cangjie_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
@@ -176,12 +175,12 @@ void tree_sitter_cangjie_external_scanner_deserialize(void *payload, const char 
     uint8_t count = (uint8_t)buffer[0];
     if (count > STACK_MAX)
         count = STACK_MAX;
-    if (length < (unsigned)(1 + count * 2))
+    if (length < (unsigned)(1 + count * 3))
         return;
     for (uint8_t i = 0; i < count; i++) {
-        s->kinds[i] = (uint8_t)buffer[1 + i * 2];
-        s->params[i] = buffer[2 + i * 2];
-        s->params2[i] = buffer[33 + i];
+        s->kinds[i] = (uint8_t)buffer[1 + i];
+        s->params[i] = buffer[1 + STACK_MAX + i];
+        s->params2[i] = buffer[1 + 2 * STACK_MAX + i];
     }
     s->top = count;
 }
@@ -549,8 +548,7 @@ static bool skip_peek_trivia(TSLexer *lexer) {
     }
 }
 
-// Conservative superset of expression-start chars: a false fire yields an error
-// inside perform_expression, a false decline breaks legal `perform\nEff()` ASI.
+// Conservative superset of expression-start chars: a false decline breaks legal perform ASI.
 static bool is_expression_start_char(int32_t c) {
     switch (c) {
     case '"':
@@ -571,8 +569,7 @@ static bool is_expression_start_char(int32_t c) {
     }
 }
 
-// `perform` is soft: fires only when an expression follows across trivia;
-// on decline it re-lexes as a plain identifier (`let x = perform`).
+// `perform` is soft: fires only when an expression follows; re-lexes as an identifier on decline.
 static bool scan_perform_dsl(TSLexer *lexer) {
     if (lexer->lookahead != 'p')
         return false;
@@ -589,8 +586,7 @@ static bool scan_perform_dsl(TSLexer *lexer) {
     return true;
 }
 
-// `resume` is soft like `perform` (cjc-verified continuations `with`/`throwing`);
-// bare `resume` and `resume(e)` stay identifiers.
+// `resume` is soft like `perform` (cjc-verified `with`/`throwing` continuations).
 static bool scan_resume_dsl(TSLexer *lexer) {
     if (lexer->lookahead != 'r')
         return false;
@@ -620,14 +616,12 @@ static bool scan_quote_content(TSLexer *lexer) {
     while (lexer->lookahead != 0) {
         char c = (char)lexer->lookahead;
         if (c == '/') {
-            // Raw content to EOL / '*/': apostrophes and parens in it stay content.
             any = true;
             skip_comment_content(lexer);
             continue;
         }
         if (c == '\n' || c == '\r') {
-            // Every newline in a quote body is its own token; the grammar decides
-            // separator vs trivia. advance(), never skip: all-skip tokens collapse to zero width.
+// Every newline in a quote body is its own token (advance, never skip: all-skip collapses).
             if (any) {
                 lexer->mark_end(lexer);
                 return true;
@@ -644,7 +638,6 @@ static bool scan_quote_content(TSLexer *lexer) {
             return any;
         }
         if (c == '@') {
-            // Split an unescaped @Name head (QUOTE_MACRO_HEAD) so queries can see macro calls inside quotes.
             lexer->mark_end(lexer);
             if (!any) {
                 advance(lexer);
@@ -672,7 +665,6 @@ static bool scan_macro_at(TSLexer *lexer) {
     return true;
 }
 
-// Shared expression-position dispatch; the caller guarantees top is expr-mode.
 static bool scan_expr_frame(TSLexer *lexer, Scanner *s, const bool *valid_symbols, const FrameInfo *info) {
     if (info->generic_lt && valid_symbols[GENERIC_LT]) {
         // Spaces/tabs only: a '\n' must stay for scan_terminator (ASI).
@@ -804,9 +796,8 @@ static bool scan_generic_lt(TSLexer *lexer) {
         }
         return false; // not type-list content: comparison
     }
-    // Follow set: Swift's *_following adapted to cangjie ASI — continuation
-    // tokens ('.' '?' '{' '|' '&' '~') keep the generic reading, '==' etc.
-    // favor comparison; comments are trivia, a newline counts as crossing.
+// Follow set: continuation tokens ('.' '?' '{' '|' '&' '~>') keep the generic reading, '=='
+// etc. favor comparison; comments are trivia, a newline counts as crossing.
     bool spaced = false, newline = false;
     int32_t c = 0;
     for (;;) {
@@ -852,7 +843,6 @@ static bool scan_generic_lt(TSLexer *lexer) {
     // A newline after a well-formed clause ends the statement (ASI): generic reading wins.
     if (newline || c == 0)
         follow = true;
-    // '(' / '=' accepted across whitespace (corpus compat); '.' stays Swift-strict.
     else if (c == '(' || c == '[' || c == '=' || (c == '.' && !spaced))
         follow = true;
     else if (c == ')' || c == ']' || c == '{' || c == '}' || c == ',' || c == ';' || c == '?' || c == '@' || c == '|' ||

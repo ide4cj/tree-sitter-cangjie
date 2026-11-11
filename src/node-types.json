@@ -1873,6 +1873,10 @@
           "named": true
         },
         {
+          "type": "macro_call_body",
+          "named": true
+        },
+        {
           "type": "macro_call_sigil",
           "named": true
         },

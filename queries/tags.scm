@@ -1,4 +1,3 @@
-; Definitions
 
 (class_definition (class_name) @name) @definition.class
 (struct_definition (struct_name) @name) @definition.struct
@@ -13,8 +12,6 @@
 (type_alias (type_alias_name) @name) @definition.type
 (property_definition (property_name) @name) @definition.property
 
-; Member fields (declaration_body parents) tag as fields; plain local
-; bindings stay variables.
 (declaration_body
     (variable_declaration
         (variable_name (var_binding_pattern)) @name)) @definition.field
@@ -26,7 +23,6 @@
 (parameter parameter_name: (identifier) @name) @definition.parameter
 (named_parameter parameter_name: (identifier) @name) @definition.parameter
 
-; References
 
 (postfix_expression
   base: (postfix_expression (identifier) @name)

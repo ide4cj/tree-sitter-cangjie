@@ -31,8 +31,7 @@ const PREC = {
   MACRO_QUOTE: 44,
 };
 
-// Keyword-like words, classified by probing cjc in all identifier positions;
-// `kind` ∈ {hard, primitive, literal, contextual, modifier}.
+// Keyword-like words, classified by probing cjc in all identifier positions.
 const KEYWORDS = [
   { w: 'as', kind: 'hard' },
   { w: 'break', kind: 'hard' },
@@ -131,17 +130,15 @@ TOKENS.NOT_IN = token('!in');
 const SOFT_MODIFIER_WORDS = words('modifier');
 const MODIFIER_TOKENS = KEYWORDS.filter((k) => k.kind === 'modifier').map((k) => TOKENS[tokenKey(k)]);
 
-// A modifier run: contextual modifier words plus always-legal extras. The
-// local-variable alias omits `const` so `const x` binds through the tail.
+// The local-variable alias omits `const` so `const x` binds through the tail.
 const modifierChoice = (...extra) => choice(...extra, ...MODIFIER_TOKENS.map((t) => reserved('modifier', t)));
 
 const PRIMITIVE_TYPES = KEYWORDS.filter((k) => k.kind === 'primitive').map((k) => [tokenKey(k), k.node]);
 
 const primitiveTypeNodes = ($) => PRIMITIVE_TYPES.map(([token, node]) => alias(TOKENS[token], $[node]));
 
-// The identifier alternative at a named position: ASCII + unicode + raw
-// (backticked) tokens under one node name; cjc accepts all three everywhere
-// and unicode/raw are never keyword-captured, exactly cjc's semantics.
+// The identifier alternative at a named position: ASCII + unicode + raw tokens under one node name;
+// cjc accepts all three everywhere and neither is ever keyword-captured.
 const ident = ($, node) =>
   choice(
     alias(reserved('default', $.identifier), $[node]),
@@ -149,8 +146,7 @@ const ident = ($, node) =>
     alias($.raw_identifier, $[node]),
   );
 
-// Reserved in every identifier position (probed against cjc): hard words,
-// primitives and literals; main's one exception is the function-name position.
+// Reserved in every identifier position (probed against cjc); main's one exception: function name.
 const GLOBAL_RESERVED = words('hard', 'primitive', 'literal');
 const NO_RESERVED = [];
 
@@ -231,11 +227,11 @@ const M = {
     [$._call_tail],
     [$.modifiers, $._modifiers_var],
     [$.modifiers, $._variable_declaration_tail],
-    // `@M(x)` — the parens could be the macro's input body or a call suffix
-    // on the body-less macro; runtime-resolved by macro_call_body's dynamic
-    // precedence. First-iteration allowance, to be revisited.
+// `@M(x)`: input body vs call suffix on a body-less macro; `@Name` as decorator: bare head vs
+// call body. Runtime-resolved by the bodies' dynamic precedence.
     [$.macro_expression],
     [$._macro_head],
+    [$.macro_call],
   ],
 
   rules: {
@@ -301,7 +297,6 @@ const M = {
 
     feature_id: ($) => sep1(reserved('none', $.identifier), '.'),
 
-    // cjc accepts `unsafe main() {}` — modifier validity is the semantic pass's job.
     main_definition: ($) =>
       seq(optional($.modifiers), TOKENS.MAIN, $.parameter_list, optional($.return_type), $.block),
     modifiers: ($) => prec.left(repeat1(modifierChoice(TOKENS.STATIC, TOKENS.CONST, TOKENS.MUT, TOKENS.UNSAFE))),
@@ -449,19 +444,16 @@ const M = {
         sep1($._type, '&'),
       ),
     function_definition: ($) => seq(optional($.modifiers), $._function_tail),
-    // Block-scope functions carry no modifiers (cjc) — see the statement-start invariant.
     _local_function_definition: ($) => $._function_tail,
     _function_tail: ($) =>
       choice(
-        // The with-body version outranks the body-less one: at an unclosed
-        // trailing '{' (EOF while typing) both versions cost one error, and
-        // the dynamic precedence makes MISSING '}' win over flagging the '{'.
+// The with-body tail outranks the body-less one: at an unclosed trailing '{' both cost one
+// error; dynamic precedence makes MISSING '}' win over flagging the '{'.
         prec.dynamic(
           1,
           prec.right(
             seq(
               TOKENS.FUNC,
-              // main is hard, but cjc accepts it as a function name — its only identifier position.
               field('name', alias(choice(reserved('default', $.identifier), $.unicode_identifier, $.raw_identifier, TOKENS.MAIN), $.func_name)),
               optional($.type_parameters),
               field('parameters', $.parameter_list),
@@ -559,7 +551,6 @@ const M = {
         $.primary_init_parameter_list,
         '{',
         optional(
-          // Function-body locals only: cjc rejects modifiers in primary-ctor bodies.
           repeat(
             seq(
               choice(
@@ -595,7 +586,6 @@ const M = {
           seq(alias($._name, $.super_or_interface), optional($.type_arguments)),
         ),
       ),
-    // cjc's parser accepts a full type (tuple/arrow dies in its semantic pass): plain type + optional parameters.
     extend_type: ($) => seq(optional($.type_parameters), $._type),
 
     block: ($) => seq('{', optional($._expression_or_declarations), '}'),
@@ -685,7 +675,6 @@ const M = {
         ),
         $._call_tail,
       ),
-    // The "whose lambda?" fork, isolated so the conflict is named after it.
     _call_tail: ($) => seq(')', optional($.lambda_expression)),
     _primary_expression: ($) =>
       choice(
@@ -878,7 +867,6 @@ const M = {
 
     command_type_pattern: ($) =>
       seq(
-        // cjc: strictly `pattern ':' Type` — `handle (e)` / `handle (Eff)` are rejected.
         choice($.wildcard_pattern, $._var_binding_pattern),
         ':',
         field('type', $._type),
@@ -920,7 +908,7 @@ const M = {
         optional($.macro_attribute_body),
       ),
 
-    // Macro parameters are raw token streams (spec); prec.dynamic beats decorators.
+// prec.dynamic(-1): body-less macro heads still reduce into macro_expression when no declaration follows.
     macro_expression: ($) =>
       prec.dynamic(-1, seq($._macro_head, optional($.macro_call_body))),
 
@@ -928,9 +916,8 @@ const M = {
       prec(
         PREC.MACRO_QUOTE,
         seq(
-          // The scanner is the primary path; the bare QUOTE alternative must
-          // stay: every reserved word needs a token, and a captured bare
-          // `quote` without '(' then fails on the missing body, like cjc.
+// The bare QUOTE alternative stays: every reserved word needs a token, and a captured bare
+// `quote` without '(' then fails on the missing body, like cjc.
           choice(alias($._quote_open, $.quote_keyword), TOKENS.QUOTE),
           // Newlines after 'quote(' are ignored (spec); each is a quoteToken separator.
           repeat($._quote_newline),
@@ -961,7 +948,6 @@ const M = {
 
     line_comment: (_) => token(prec(PREC.COMMENT, seq('//', /[^\r\n\u2028\u2029]*/))),
 
-    // REFUTABLE patterns for match + let-destructure; IRREFUTABLE for let/foreach.
     _pattern: ($) => choice($.or_pattern, $._pattern_single),
 
     _pattern_single: ($) =>
@@ -1210,15 +1196,11 @@ const M = {
 
     unit_literal: (_) => seq('(', ')'),
 
-    macro_call: ($) => prec(1, $._macro_head),
+    macro_call: ($) => prec(1, seq($._macro_head, optional($.macro_call_body))),
 
-    // Macro bodies are ad-hoc EXPRESSION lists (cjls parses macro content
-    // speculatively and falls back to raw tokens on error; we parse
-    // structurally): bare or comma-separated expressions, named `k: v`
-    // arguments, and `x in y` via the binary operators. The bodies carry
-    // dynamic precedence so they attach to the head — without it, `@M[1]`
-    // in expression position would parse as an index suffix on a body-less
-    // macro, `@M(x)` as a call.
+// Macro bodies are ad-hoc expression lists (cjls parity): bare or comma-separated expressions,
+// named `k: v` arguments, `x in y` via the binary operators. Dynamic precedence makes the body
+// attach to the head instead of an index suffix / call.
     macro_attribute_body: ($) =>
       prec.dynamic(
         1,
@@ -1234,9 +1216,7 @@ const M = {
         ),
       ),
     _macro_body_arguments: ($) => commaSep1Trailing($._macro_body_argument),
-    // The named-argument label is a plain identifier (ident(): unicode and
-    // backticked names included), exactly like call_suffix labels — no
-    // body-specific node, so the identifier captures apply uniformly.
+// The named-argument label is a plain identifier, exactly like call_suffix labels.
     _macro_body_argument: ($) =>
       choice(
         seq(ident($, 'identifier'), ':', field('value', $._expression)),
@@ -1244,20 +1224,15 @@ const M = {
       ),
 
     block_comment: ($) => seq('/*', $._block_comment_content),
-    // cjc: identifiers are XID (NFC-normalized by cjc; tree-sitter keeps bytes),
-    // keywords are ASCII-only. tree-sitter: the `word` token must compile to
-    // character sets WITHOUT the u flag — \p{...} classes, unicode ranges or
-    // the flag itself silently kill keyword conversion (Int64 stops being a
-    // keyword). unicode_identifier/raw_identifier join via ident(); do NOT
-    // alias either to the word symbol (overflows the word analysis).
+// cjc identifiers are XID, keywords ASCII-only. The `word` token must compile to character sets
+// WITHOUT the u flag — unicode classes/ranges silently kill keyword conversion. Do NOT alias
+// unicode_identifier/raw_identifier to the word symbol.
     identifier: (_) => token(/[a-zA-Z_][a-zA-Z0-9_]*/),
     unicode_identifier: ($) => token(/[\p{XID_Start}_][\p{XID_Continue}_]*/u),
     raw_identifier: ($) => token(seq('`', /[\p{XID_Start}_][\p{XID_Continue}_]*/u, '`')),
-    // cjc's PACKAGE_IDENTIFIER: a backticked import-path segment containing at
-    // least one separator ('-', '.', space) — plain backticked names are raw
-    // identifiers, keeping the tokens disjoint (no lookahead in tree-sitter).
-    // Raw LAST import segments are rejected by cjc; the scoped chain enforces
-    // it. Accepted divergences: '::' in type chains, raw package headers.
+// cjc's PACKAGE_IDENTIFIER: a backticked segment with >=1 separator; plain backticked names are
+// raw identifiers (tokens disjoint). Raw LAST import segments are rejected via the scoped chain.
+// Accepted divergences: '::' in type chains, raw package headers.
     package_identifier: ($) =>
       token(seq('`', /[\p{XID_Continue}.\- ]*/u, choice('.', '-', ' '), /[\p{XID_Continue}.\- ]*/u, '`')),
   },

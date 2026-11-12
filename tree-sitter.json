@@ -7,26 +7,11 @@
       "title": "Cangjie",
       "scope": "source.cj",
       "file-types": [
-        "cj.macrocall",
-        "cj"
-      ],
-      "injection-regex": "^cangjie$",
-      "class-name": "TreeSitterCangjie"
-    }
-  ],
-  "tree-sitter": [
-    {
-      "scope": "source.cj",
-      "file-types": [
         "cj",
         "cj.macrocall"
       ],
-      "highlights": "queries/highlights.scm",
-      "locals": "queries/locals.scm",
-      "folds": "queries/folds.scm",
-      "indents": "queries/indents.scm",
-      "textobjects": "queries/textobjects.scm",
-      "tags": "queries/tags.scm"
+      "injection-regex": "^cangjie$",
+      "class-name": "TreeSitterCangjie"
     }
   ],
   "metadata": {

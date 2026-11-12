@@ -481,6 +481,10 @@
           "named": true
         },
         {
+          "type": "decorated_declaration",
+          "named": true
+        },
+        {
           "type": "function_definition",
           "named": true
         },
@@ -538,6 +542,10 @@
           "named": true
         },
         {
+          "type": "decorated_declaration",
+          "named": true
+        },
+        {
           "type": "function_definition",
           "named": true
         },
@@ -562,6 +570,10 @@
         },
         {
           "type": "constant_pattern",
+          "named": true
+        },
+        {
+          "type": "decorated_declaration",
           "named": true
         },
         {
@@ -833,6 +845,10 @@
           "named": true
         },
         {
+          "type": "import_list",
+          "named": true
+        },
+        {
           "type": "init",
           "named": true
         },
@@ -841,7 +857,11 @@
           "named": true
         },
         {
-          "type": "macro_call",
+          "type": "macro_decorator",
+          "named": true
+        },
+        {
+          "type": "macro_expression",
           "named": true
         },
         {
@@ -939,7 +959,7 @@
             "named": true
           },
           {
-            "type": "macro_call",
+            "type": "macro_decorator",
             "named": true
           }
         ]
@@ -1204,15 +1224,11 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
           "type": "features_set",
-          "named": true
-        },
-        {
-          "type": "macro_call",
           "named": true
         }
       ]
@@ -1224,7 +1240,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "feature_id",
@@ -1548,10 +1564,6 @@
       "required": false,
       "types": [
         {
-          "type": "macro_call",
-          "named": true
-        },
-        {
           "type": "modifiers",
           "named": true
         },
@@ -1731,6 +1743,10 @@
           "named": true
         },
         {
+          "type": "decorated_declaration",
+          "named": true
+        },
+        {
           "type": "function_definition",
           "named": true
         },
@@ -1861,33 +1877,6 @@
     }
   },
   {
-    "type": "macro_call",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "macro_attribute_body",
-          "named": true
-        },
-        {
-          "type": "macro_call_body",
-          "named": true
-        },
-        {
-          "type": "macro_call_sigil",
-          "named": true
-        },
-        {
-          "type": "macro_name",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "macro_call_body",
     "named": true,
     "fields": {
@@ -1920,6 +1909,29 @@
         },
         {
           "type": "macro_input_open",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "macro_decorator",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "macro_attribute_body",
+          "named": true
+        },
+        {
+          "type": "macro_call_sigil",
+          "named": true
+        },
+        {
+          "type": "macro_name",
           "named": true
         }
       ]
@@ -2176,7 +2188,7 @@
       "required": true,
       "types": [
         {
-          "type": "macro_call",
+          "type": "macro_decorator",
           "named": true
         },
         {
@@ -2230,7 +2242,7 @@
       "required": false,
       "types": [
         {
-          "type": "macro_call",
+          "type": "macro_decorator",
           "named": true
         }
       ]
@@ -2487,7 +2499,7 @@
       "required": false,
       "types": [
         {
-          "type": "macro_call",
+          "type": "macro_decorator",
           "named": true
         },
         {
@@ -3973,7 +3985,7 @@
       "required": false,
       "types": [
         {
-          "type": "macro_call",
+          "type": "macro_decorator",
           "named": true
         },
         {

@@ -715,7 +715,7 @@ var a: Int64 = 0
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name))
     (variable_declaration
@@ -735,7 +735,7 @@ macro call without parens applies to class declaration
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name))
     (class_definition
@@ -756,11 +756,10 @@ main() {
   (main_definition
     (parameter_list)
     (block
-      (postfix_expression
-        (macro_expression
+      (decorated_declaration
+        (macro_decorator
           (macro_call_sigil)
-          (macro_name)))
-      (postfix_expression
+          (macro_name))
         (macro_expression
           (macro_call_sigil)
           (macro_name)
@@ -774,15 +773,29 @@ main() {
             (macro_input_close)))))))
 
 ==================
-nested macro calls at top level do not compose
-:error
+nested macro calls at top level parse as sibling macro expressions
 ==================
 
 @Outer @Inner(2+3)
 
 ---
 
-
+(source_file
+  (decorated_declaration
+    (macro_decorator
+      (macro_call_sigil)
+      (macro_name))
+    (macro_expression
+      (macro_call_sigil)
+      (macro_name)
+      (macro_call_body
+        (macro_input_open)
+        (binary_expression
+          (postfix_expression
+            (integer_literal))
+          (postfix_expression
+            (integer_literal)))
+        (macro_input_close)))))
 
 ==================
 macro call in variable initializer
@@ -843,30 +856,13 @@ unbalanced parens in macro input parse as a call and close at EOF
       (MISSING macro_input_close))))
 
 ==================
-unbalanced brackets in attribute parse as index and call, close missing
+trailing unbalanced attribute call is an error (cjc: unclosed delimiter)
+:error
 ==================
-
 @ABC[a [ b]()
 
 ---
 
-(source_file
-  (macro_expression
-    (macro_call_sigil)
-    (macro_name)
-    (macro_attribute_body
-      (macro_attr_open)
-      (postfix_expression
-        base: (postfix_expression
-          base: (postfix_expression
-            (identifier))
-          suffix: (index_access
-            (postfix_expression
-              (identifier))))
-        suffix: (call_suffix))
-      (MISSING macro_attr_close))))
-
-==================
 source location tags in expressions and default parameters
 ==================
 
@@ -951,7 +947,7 @@ func invokeGC(heavy: Bool): Unit
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name))
     (function_definition
@@ -974,7 +970,7 @@ foreign func f(x: Int64): Int64
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name))
     (foreign_declaration
@@ -1000,7 +996,7 @@ func foo() {
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name)
       (macro_attribute_body
@@ -1041,7 +1037,7 @@ func foo() {
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name)
       (macro_attribute_body
@@ -1102,7 +1098,7 @@ func tee() { }
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name)
       (macro_attribute_body
@@ -1116,7 +1112,7 @@ func tee() { }
       (parameter_list)
       (block)))
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name)
       (macro_attribute_body
@@ -1139,8 +1135,8 @@ import std.math.*
 ---
 
 (source_file
-  (import_list
-    (macro_call
+  (decorated_declaration
+    (macro_decorator
       (macro_call_sigil)
       (macro_name)
       (macro_attribute_body
@@ -1154,10 +1150,11 @@ import std.math.*
               (string_content)
               (string_end))))
         (macro_attr_close)))
-    (package_full
-      (scoped_identifier
-        (identifier)
-        (identifier)))))
+    (import_list
+      (package_full
+        (scoped_identifier
+          (identifier)
+          (identifier))))))
 
 ==================
 macro package declaration with public macro
@@ -1270,10 +1267,9 @@ macro bodies: ad-hoc expression argument forms
 ==================
 
 let a = @M(bare)
-let b = @M[1, x + 2, "s"]
-let c = @M[k: v, n: 42]
-let d = @Bench[x in data]
-@When[os == "Windows"]
+let b = @M(1, x + 2, "s")
+let c = @M(k: v, n: 42)
+let d = @Bench(x in data)
 
 ---
 
@@ -1297,8 +1293,8 @@ let d = @Bench[x in data]
       (macro_expression
         (macro_call_sigil)
         (macro_name)
-        (macro_attribute_body
-          (macro_attr_open)
+        (macro_call_body
+          (macro_input_open)
           (postfix_expression
             (integer_literal))
           (binary_expression
@@ -1311,7 +1307,7 @@ let d = @Bench[x in data]
               (string_start)
               (string_content)
               (string_end)))
-          (macro_attr_close)))))
+          (macro_input_close)))))
   (variable_declaration
     name: (variable_name
       (var_binding_pattern))
@@ -1319,15 +1315,15 @@ let d = @Bench[x in data]
       (macro_expression
         (macro_call_sigil)
         (macro_name)
-        (macro_attribute_body
-          (macro_attr_open)
+        (macro_call_body
+          (macro_input_open)
           (identifier)
           value: (postfix_expression
             (identifier))
           (identifier)
           value: (postfix_expression
             (integer_literal))
-          (macro_attr_close)))))
+          (macro_input_close)))))
   (variable_declaration
     name: (variable_name
       (var_binding_pattern))
@@ -1335,25 +1331,22 @@ let d = @Bench[x in data]
       (macro_expression
         (macro_call_sigil)
         (macro_name)
-        (macro_attribute_body
-          (macro_attr_open)
+        (macro_call_body
+          (macro_input_open)
           (binary_expression
             left: (postfix_expression
               (identifier))
             right: (postfix_expression
               (identifier)))
-          (macro_attr_close)))))
-  (macro_expression
-    (macro_call_sigil)
-    (macro_name)
-    (macro_attribute_body
-      (macro_attr_open)
-      (binary_expression
-        left: (postfix_expression
-          (identifier))
-        right: (postfix_expression
-          (string_literal
-            (string_start)
-            (string_content)
-            (string_end))))
-      (macro_attr_close))))
+          (macro_input_close))))))
+
+==================
+trailing bracket decorator without a declaration is an error (cjc)
+:error
+==================
+
+@When[os == "Windows"]
+
+---
+
+

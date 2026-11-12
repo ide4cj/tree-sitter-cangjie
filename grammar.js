@@ -227,19 +227,11 @@ const M = {
     [$._call_tail],
     [$.modifiers, $._modifiers_var],
     [$.modifiers, $._variable_declaration_tail],
-// `@M(x)`: input body vs call suffix on a body-less macro; `@Name` as decorator: bare head vs
-// call body. Runtime-resolved by the bodies' dynamic precedence.
-    [$.macro_expression],
-    [$._macro_head],
-    [$.macro_call],
   ],
 
   rules: {
     source_file: ($) =>
       seq(
-        optional($.features_directive),
-        optional(choice($.package_declaration, $.macro_package_declaration)),
-        repeat($.import_list),
         repeat(
           seq(
             optional(token(';')),
@@ -258,6 +250,10 @@ const M = {
                 $.macro_definition,
                 $.decorated_declaration,
                 $.macro_expression,
+                $.import_list,
+                $.features_directive,
+                $.package_declaration,
+                $.macro_package_declaration,
               ),
               $.main_definition,
             ),
@@ -279,7 +275,6 @@ const M = {
       ),
     import_list: ($) =>
       seq(
-        repeat($.macro_call),
         optional($.modifiers),
         TOKENS.IMPORT,
         choice($._import_packages, $.package_group, $.sub_group_of_package),
@@ -291,9 +286,9 @@ const M = {
     sub_group_of_package: ($) => seq(field('package_name', choice($._name, $.package_identifier)), '.', $.package_group),
 
     features_directive: ($) =>
-      prec.right(seq(repeat($.macro_call), TOKENS.FEATURES, $.features_set, repeat1(terminator($)))),
+      prec.right(seq(TOKENS.FEATURES, $.features_set, repeat1(terminator($)))),
 
-    features_set: ($) => seq('{', commaSep1Trailing($.feature_id), '}'),
+    features_set: ($) => seq('{', optional(commaSep1Trailing($.feature_id)), '}'),
 
     feature_id: ($) => sep1(reserved('none', $.identifier), '.'),
 
@@ -303,31 +298,29 @@ const M = {
     _modifiers_var: ($) =>
       alias(prec.left(repeat1(modifierChoice(TOKENS.STATIC, TOKENS.MUT, TOKENS.UNSAFE))), $.modifiers),
     decorated_declaration: ($) =>
-      prec.dynamic(
-        1,
-        prec.right(
-          seq(
-            repeat1($.macro_call),
-            choice(
-              $.class_definition,
-              $.function_definition,
-              $.struct_definition,
-              $.interface_definition,
-              $.enum_definition,
-              $.type_alias,
-              $.extend_definition,
-              $.foreign_declaration,
-              $.variable_declaration,
-              $.operator_function_definition,
-              $.property_definition,
-              $.init,
-              $.finalizer,
-              $.primary_init,
-            ),
+      prec.right(
+        seq(
+          repeat1($.macro_decorator),
+          choice(
+            $.class_definition,
+            $.function_definition,
+            $.struct_definition,
+            $.interface_definition,
+            $.enum_definition,
+            $.type_alias,
+            $.extend_definition,
+            $.foreign_declaration,
+            $.variable_declaration,
+            $.operator_function_definition,
+            $.property_definition,
+            $.init,
+            $.finalizer,
+            $.primary_init,
+            $.macro_expression,
+            $.import_list,
           ),
         ),
       ),
-
     macro_definition: ($) =>
       seq(
         optional($.modifiers),
@@ -373,7 +366,7 @@ const M = {
             'enum_constant',
             choice(
               seq(
-                repeat($.macro_call),
+                repeat($.macro_decorator),
                 ident($, 'identifier'),
                 optional(seq('(', commaSep1Trailing($._type), ')')),
               ),
@@ -475,8 +468,7 @@ const M = {
         ),
       ),
     operator_function_definition: ($) =>
-      seq(
-        optional($.modifiers),
+      prec.right(seq(        optional($.modifiers),
         TOKENS.OPERATOR,
         optional(TOKENS.CONST),
         TOKENS.FUNC,
@@ -513,11 +505,10 @@ const M = {
         optional(field('return_type', $.return_type)),
         optional($.generic_constraints),
         optional(field('body', $.block)),
-      ),
+      )),
 
     property_definition: ($) =>
-      seq(
-        optional($.modifiers),
+      prec.right(seq(        optional($.modifiers),
         TOKENS.PROP,
         field('name', ident($, 'property_name')),
         ':',
@@ -535,15 +526,15 @@ const M = {
             '}',
           ),
         ),
-      ),
+      )),
 
     init: ($) =>
-      seq(
+      prec.right(seq(
         optional($.modifiers),
         TOKENS.INIT,
         field('parameters', $.parameter_list),
         optional(field('body', $.block)),
-      ),
+      )),
     primary_init: ($) =>
       seq(
         optional($.modifiers),
@@ -573,7 +564,7 @@ const M = {
         ')',
       ),
     named_member_parameter: ($) =>
-      seq(repeat($.macro_call), optional($.modifiers), choice(TOKENS.LET, TOKENS.VAR), $.named_parameter),
+      seq(repeat($.macro_decorator), optional($.modifiers), choice(TOKENS.LET, TOKENS.VAR), $.named_parameter),
 
     finalizer: ($) => seq('~', TOKENS.INIT, '(', ')', $.block),
 
@@ -595,6 +586,7 @@ const M = {
       repeat1(
         seq(
           choice(
+            $.decorated_declaration,
             alias($._local_variable_declaration, $.variable_declaration),
             alias($._local_function_definition, $.function_definition),
             $._expression,
@@ -630,7 +622,7 @@ const M = {
 
     parameter: ($) =>
       seq(
-        repeat($.macro_call),
+        repeat($.macro_decorator),
         choice(
           seq(
             field('parameter_name', choice(ident($, 'identifier'), token('_'))),
@@ -643,7 +635,7 @@ const M = {
       ),
     named_parameter: ($) =>
       seq(
-        repeat($.macro_call),
+        repeat($.macro_decorator),
         seq(field('parameter_name', ident($, 'identifier')), '!'),
         ':',
         field('type', $._type),
@@ -651,7 +643,7 @@ const M = {
       ),
     unnamed_member_parameter: ($) =>
       seq(
-        repeat($.macro_call),
+        repeat($.macro_decorator),
         optional($.modifiers),
         choice(TOKENS.LET, TOKENS.VAR),
         field('parameter_name', choice(ident($, 'identifier'), token('_'))),
@@ -900,17 +892,19 @@ const M = {
 
     _dollar_identifier: ($) => seq('$', reserved('none', $.identifier)),
 
+    // Decorator prefix (cjc: `expected declaration` if nothing follows it).
+    macro_decorator: ($) => $._macro_head,
+
     _macro_head: ($) =>
-      seq(
+      prec.right(seq(
         alias($._macro_at, $.macro_call_sigil),
         optional('!'),
         $._macro_name,
         optional($.macro_attribute_body),
-      ),
+      )),
 
-// prec.dynamic(-1): body-less macro heads still reduce into macro_expression when no declaration follows.
-    macro_expression: ($) =>
-      prec.dynamic(-1, seq($._macro_head, optional($.macro_call_body))),
+    // The call form is the only standalone macro expression (cjc-verified).
+    macro_expression: ($) => seq($._macro_head, $.macro_call_body),
 
     quote_expression: ($) =>
       prec(
@@ -1195,8 +1189,6 @@ const M = {
       choice(alias($._local_variable_declaration, $.variable_declaration), $._expression),
 
     unit_literal: (_) => seq('(', ')'),
-
-    macro_call: ($) => prec(1, seq($._macro_head, optional($.macro_call_body))),
 
 // Macro bodies are ad-hoc expression lists (cjls parity): bare or comma-separated expressions,
 // named `k: v` arguments, `x in y` via the binary operators. Dynamic precedence makes the body

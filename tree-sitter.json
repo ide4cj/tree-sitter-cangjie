@@ -41,7 +41,7 @@
       }
     ],
     "links": {
-      "repository": "https://github.com/BonZirka/tree-sitter-cangjie"
+      "repository": "https://github.com/ide4cj/tree-sitter-cangjie"
     }
   },
   "bindings": {

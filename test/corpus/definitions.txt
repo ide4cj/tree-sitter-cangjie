@@ -253,7 +253,7 @@ public func stable(): Unit { }
 
 (source_file
   (decorated_declaration
-    (macro_call
+    (macro_decorator
       (macro_call_sigil)
       (macro_name))
     (function_definition

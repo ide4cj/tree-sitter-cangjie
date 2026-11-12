@@ -35,7 +35,8 @@ main() {
             (quote_close)))))))
 
 ==================
-macro body parses expressions, strings and numbers
+macro body statement without an attached declaration is an error (cjc)
+:error
 ==================
 main() {
   @M[t, "s" + u, 1.5e3]
@@ -67,7 +68,8 @@ main() {
             (macro_attr_close)))))))
 
 ==================
-unbalanced call in macro body recovers with a missing paren
+unclosed delimiter inside an attribute body is an error (cjc)
+:error
 ==================
 main() {
   @M[a(b]
@@ -142,17 +144,17 @@ let s = "${@f(1)}"
           (interp_close))
         (string_end)))))
 
-================================================================================
+============================================
 comments inside quote and macro bodies are raw content
-================================================================================
+============================================
 
 main() {
     let q = quote( // they're fine
         Foo )
     let r = quote( /* it's (odd) */ Foo )
-    let m = @M[ // they're ] fine
-        Bar ]
-    let n = @M[ /* it's ] */ Bar ]
+    @M[ // they're ] fine
+        Bar ] func g() {}
+    @M[ /* it's ] */ Bar ] func h() {}
 }
 
 ----------------------------------------------------------------------------------
@@ -179,29 +181,31 @@ main() {
             (quote_keyword)
             (quote_raw_token)
             (quote_close))))
-      (variable_declaration
-        (variable_name
-          (var_binding_pattern))
-        (postfix_expression
-          (macro_expression
-            (macro_call_sigil)
-            (macro_name)
-            (macro_attribute_body
-              (macro_attr_open)
-              (line_comment)
-              (postfix_expression
-                (identifier))
-              (macro_attr_close)))))
-      (variable_declaration
-        (variable_name
-          (var_binding_pattern))
-        (postfix_expression
-          (macro_expression
-            (macro_call_sigil)
-            (macro_name)
-            (macro_attribute_body
-              (macro_attr_open)
-              (block_comment)
-              (postfix_expression
-                (identifier))
-              (macro_attr_close))))))))
+      (decorated_declaration
+        (macro_decorator
+          (macro_call_sigil)
+          (macro_name)
+          (macro_attribute_body
+            (macro_attr_open)
+            (line_comment)
+            (postfix_expression
+              (identifier))
+            (macro_attr_close)))
+        (function_definition
+          (func_name)
+          (parameter_list)
+          (block)))
+      (decorated_declaration
+        (macro_decorator
+          (macro_call_sigil)
+          (macro_name)
+          (macro_attribute_body
+            (macro_attr_open)
+            (block_comment)
+            (postfix_expression
+              (identifier))
+            (macro_attr_close)))
+        (function_definition
+          (func_name)
+          (parameter_list)
+          (block))))))

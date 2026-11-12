@@ -14,7 +14,7 @@ enum E {
   (enum_definition
     (enum_name)
     (enum_body
-      (macro_call
+      (macro_decorator
         (macro_call_sigil)
         (macro_name)
         (macro_attribute_body
@@ -24,7 +24,7 @@ enum E {
             (integer_literal))
           (macro_attr_close)))
       (identifier)
-      (macro_call
+      (macro_decorator
         (macro_call_sigil)
         (macro_name)
         (macro_attribute_body
@@ -36,7 +36,7 @@ enum E {
               (string_content)
               (string_end)))
           (macro_attr_close)))
-      (macro_call
+      (macro_decorator
         (macro_call_sigil)
         (macro_name))
       (identifier)
@@ -61,7 +61,7 @@ class P {
         (class_name)
         (primary_init_parameter_list
           (named_member_parameter
-            (macro_call
+            (macro_decorator
               (macro_call_sigil)
               (macro_name)
               (macro_attribute_body
@@ -78,7 +78,7 @@ class P {
               (identifier)
               (Int64)))
           (unnamed_member_parameter
-            (macro_call
+            (macro_decorator
               (macro_call_sigil)
               (macro_name))
             (identifier)

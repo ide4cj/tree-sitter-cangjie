@@ -33,5 +33,5 @@
   suffix: (type_arguments)) @reference.call
 
 (type_name (identifier) @name) @reference.type
-(extend_type (identifier) @name) @reference.type
+(extend_type (type_name (identifier) @name)) @reference.type
 (enum_constructor) @name @reference.class

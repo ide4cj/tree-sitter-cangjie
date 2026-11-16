@@ -97,6 +97,8 @@ let r = quote(1 + @PlusOne(x) * 2)
 //               ^ @markup.raw
 
 class Box {
+    Box(let z: Int64) {}
+//  ^ @constructor
     @Deprecated let y: Int64 = 0
 //                  ^ @variable.member
     const c = 1

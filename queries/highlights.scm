@@ -92,6 +92,8 @@
 ; regardless of pattern order — type positions are captured explicitly below.
 
 (class_name) @type
+; a primary constructor's name is its class's constructor, not a type use
+(primary_init (class_name) @constructor)
 (struct_name) @type
 (interface_name) @type
 (enum_name) @type

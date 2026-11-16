@@ -151,8 +151,10 @@
     (Thistype)
 ] @type.builtin
 
-(enum_body enum_constant: (identifier) @constant)
-(enum_constructor) @constant
+; enum cases: a capture of their own, so a theme can color them apart from `const`;
+; cangjie.nvim resolves it to the group the server's enumMember tokens take
+(enum_body enum_constant: (identifier) @enum_member)
+(enum_constructor) @enum_member
 
 (declaration_body
     (variable_declaration

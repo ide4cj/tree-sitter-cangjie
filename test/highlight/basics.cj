@@ -63,9 +63,22 @@ class Shape<T> <: Pane {
 enum Color { Red | Green }
 //^ @keyword.type
 //   ^ @type
-//           ^ @constant
+//           ^ @enum_member
 //               ^ @punctuation.delimiter
-//                 ^ @constant
+//                 ^ @enum_member
+
+main() {
+    match (c) {
+        case Red(x) => x
+//           ^ @enum_member
+//               ^ @variable
+        case Color.Green => 1
+//                 ^ @enum_member
+    }
+    if (let Green(y) <- c) { y }
+//          ^ @enum_member
+//                ^ @variable
+}
 
 main() {
 //^ @function

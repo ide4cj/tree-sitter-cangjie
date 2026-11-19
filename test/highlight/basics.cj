@@ -39,11 +39,14 @@ class Shape<T> <: Pane {
 //                                                 ^ @operator
 //                                                    ^ @type
         this.area = k ?? 1.5
-//      ^ @variable.builtin
+//      ^ @keyword
 //           ^ @variable.member
 //                ^ @operator
 //                    ^ @operator
 //                       ^ @number.float
+        super.area = k
+//      ^ @keyword
+//            ^ @variable.member
         let msg = "pi=${k} end"
 //      ^ @keyword
 //          ^ @variable

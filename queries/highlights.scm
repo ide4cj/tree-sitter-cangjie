@@ -24,7 +24,8 @@
 "_" @variable.parameter.builtin
 
 (var_binding_pattern) @variable
-(this_super_expression) @variable.builtin
+; `this` and `super` are hard keywords
+(this_super_expression) @keyword
 (wildcard_pattern) @variable.builtin
 
 
